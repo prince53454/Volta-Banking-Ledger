@@ -104,13 +104,12 @@ async function createTransaction(req, res) {
     }
 
     let transaction;
+    let session;
     try {
-
-
         /**
          * 5. Create transaction (PENDING)
          */
-        const session = await mongoose.startSession()
+        session = await mongoose.startSession()
         session.startTransaction()
 
         transaction = (await transactionModel.create([{
@@ -129,10 +128,6 @@ async function createTransaction(req, res) {
             type: "DEBIT"
         }], { session })
 
-        await (() => {
-            return new Promise((resolve) => setTimeout(resolve, 15 * 1000));
-        })()
-
         const creditLedgerEntry = await ledgerModel.create([{
             account: toAccount,
             amount: amount,
@@ -147,20 +142,25 @@ async function createTransaction(req, res) {
             { session }
         )
 
-
         await session.commitTransaction()
         session.endSession()
     } catch (error) {
+        if (session) {
+            await session.abortTransaction().catch(() => {});
+            session.endSession();
+        }
 
         return res.status(400).json({
-            message: "Transaction is Pending due to some issue, please retry after sometime",
+            message: "Transaction failed, please retry",
+            error: error.message
         })
-
     }
+
     /**
      * 10. Send email notification
      */
-    await emailService.sendTransactionEmail(req.user.email, req.user.name, amount, toAccount)
+    emailService.sendTransactionEmail(req.user.email, req.user.name, amount, toAccount)
+        .catch(err => console.error("Email notification error:", err));
 
     return res.status(201).json({
         message: "Transaction completed successfully",
@@ -202,45 +202,118 @@ async function createInitialFundsTransaction(req, res) {
     const session = await mongoose.startSession()
     session.startTransaction()
 
-    const transaction = new transactionModel({
-        fromAccount: fromUserAccount._id,
-        toAccount,
-        amount,
-        idempotencyKey,
-        status: "PENDING"
-    })
+    try {
+        const transaction = new transactionModel({
+            fromAccount: fromUserAccount._id,
+            toAccount,
+            amount,
+            idempotencyKey,
+            status: "PENDING"
+        })
 
-    const debitLedgerEntry = await ledgerModel.create([{
-        account: fromUserAccount._id,
-        amount: amount,
-        description: "Initial funds debit",
-        transaction: transaction._id,
-        type: "DEBIT"
-    }], { session })
+        const debitLedgerEntry = await ledgerModel.create([{
+            account: fromUserAccount._id,
+            amount: amount,
+            description: "Initial funds debit",
+            transaction: transaction._id,
+            type: "DEBIT"
+        }], { session })
 
-    const creditLedgerEntry = await ledgerModel.create([{
-        account: toAccount,
-        amount: amount,
-        description: "Initial funds credit",
-        transaction: transaction._id,
-        type: "CREDIT"
-    }], { session })
+        const creditLedgerEntry = await ledgerModel.create([{
+            account: toAccount,
+            amount: amount,
+            description: "Initial funds credit",
+            transaction: transaction._id,
+            type: "CREDIT"
+        }], { session })
 
-    transaction.status = "COMPLETED"
-    await transaction.save({ session })
+        transaction.status = "COMPLETED"
+        await transaction.save({ session })
 
-    await session.commitTransaction()
-    session.endSession()
+        await session.commitTransaction()
+        session.endSession()
 
-    return res.status(201).json({
-        message: "Initial funds transaction completed successfully",
-        transaction: transaction
-    })
+        return res.status(201).json({
+            message: "Initial funds transaction completed successfully",
+            transaction: transaction
+        })
+    } catch (err) {
+        await session.abortTransaction().catch(() => {});
+        session.endSession();
+        return res.status(500).json({
+            message: "Initial funds transaction failed",
+            error: err.message
+        });
+    }
 
+}
 
+async function getUserTransactions(req, res) {
+    try {
+        const userAccounts = await accountModel.find({ user: req.user._id });
+        const accountIds = userAccounts.map(a => a._id);
+
+        const transactions = await transactionModel.find({
+            $or: [
+                { fromAccount: { $in: accountIds } },
+                { toAccount: { $in: accountIds } }
+            ]
+        }).sort({ createdAt: -1 });
+
+        return res.status(200).json({ transactions });
+    } catch (err) {
+        return res.status(500).json({ message: "Failed to fetch transactions", error: err.message });
+    }
+}
+
+async function depositFunds(req, res) {
+    const { accountId, amount } = req.body;
+    if (!accountId || !amount || Number(amount) <= 0) {
+        return res.status(400).json({ message: "Valid accountId and positive amount are required" });
+    }
+
+    const account = await accountModel.findOne({ _id: accountId, user: req.user._id });
+    if (!account) {
+        return res.status(404).json({ message: "Account not found or unauthorized" });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const transaction = (await transactionModel.create([{
+            fromAccount: account._id,
+            toAccount: account._id,
+            amount: Number(amount),
+            idempotencyKey: `dep_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+            status: "COMPLETED"
+        }], { session }))[0];
+
+        await ledgerModel.create([{
+            account: account._id,
+            amount: Number(amount),
+            description: "Direct Deposit / Demo Faucet",
+            transaction: transaction._id,
+            type: "CREDIT"
+        }], { session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json({
+            message: `Successfully deposited ₹${amount}`,
+            transaction
+        });
+    } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(500).json({ message: "Deposit failed", error: err.message });
+    }
 }
 
 module.exports = {
     createTransaction,
-    createInitialFundsTransaction
+    createInitialFundsTransaction,
+    getUserTransactions,
+    depositFunds
 }
+

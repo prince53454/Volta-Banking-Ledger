@@ -25,8 +25,20 @@ async function authMiddleware(req, res, next) {
     try {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        const userId = decoded.userID || decoded.userId
 
-        const user = await userModel.findById(decoded.userId)
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized access, invalid token payload"
+            })
+        }
+
+        const user = await userModel.findById(userId)
+        if (!user) {
+            return res.status(401).json({
+                message: "Unauthorized access, user does not exist"
+            })
+        }
 
         req.user = user
 
@@ -58,9 +70,16 @@ async function authSystemUserMiddleware(req, res, next) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        const userId = decoded.userID || decoded.userId
 
-        const user = await userModel.findById(decoded.userId).select("+systemUser")
-        if (!user.systemUser) {
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized access, invalid token payload"
+            })
+        }
+
+        const user = await userModel.findById(userId).select("+systemUser")
+        if (!user || !user.systemUser) {
             return res.status(403).json({
                 message: "Forbidden access, not a system user"
             })
