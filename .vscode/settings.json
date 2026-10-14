@@ -1,0 +1,16 @@
+{
+    "claudeCodeChat.permissions.yoloMode": true,
+    "chatgpt.openOnStartup": true,
+    "editor.quickSuggestions": {
+        "other": true,
+        "comments": false,
+        "strings": true
+    },
+    "editor.suggestOnTriggerCharacters": true,
+    "editor.inlineSuggest.enabled": true,
+    "editor.parameterHints.enabled": true,
+    "editor.tabCompletion": "on",
+    "editor.wordBasedSuggestions": "matchingDocuments",
+    "javascript.suggest.autoImports": true,
+    "typescript.suggest.autoImports": true
+}
