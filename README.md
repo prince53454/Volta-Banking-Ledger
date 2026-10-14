@@ -2,6 +2,10 @@
 
 A secure, institutional-grade double-entry banking platform and financial ledger application built with Node.js/Express, MongoDB multi-document transactions, JWT zero-trust authentication, Nodemailer notifications, and a modern React dashboard.
 
+## Live Application
+
+**Open Volta:** [https://volta-banking-ledger.vercel.app](https://volta-banking-ledger.vercel.app)
+
 ---
 
 ## 🚀 Quick Start
