@@ -22,6 +22,30 @@ app.use("/api/auth", authRoutes);
 app.use("/api/accounts", accountRoutes);
 app.use("/api/transactions", transactionRoutes);
 
+app.get("/api/health", (req, res) => {
+    res.status(200).json({ status: "ok" });
+});
+
+app.use((err, req, res, next) => {
+    if (!req.path.startsWith("/api")) {
+        return next(err);
+    }
+
+    const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 600
+        ? err.status
+        : 500;
+    const message = err.type === "entity.parse.failed"
+        ? "Request body must be valid JSON."
+        : "An unexpected server error occurred.";
+
+    console.error("API request error:", err);
+    return res.status(status).json({ message });
+});
+
+app.use("/api", (req, res) => {
+    res.status(404).json({ message: "API route not found" });
+});
+
 // In production, serve the built React frontend
 const frontendDist = path.join(__dirname, "../frontend/dist");
 app.use(express.static(frontendDist));

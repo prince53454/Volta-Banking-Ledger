@@ -46,6 +46,19 @@ npm run frontend
 
 Open your browser at: **[http://localhost:5173](http://localhost:5173)**
 
+## Deploying to Vercel
+
+This repository deploys as a static Vite frontend plus the `api/index.js` serverless function. Import the repository from its root and leave the Vercel Framework Preset set to **Other** (do not select **Services**).
+
+Add these Environment Variables in Vercel for each environment you deploy to:
+
+```env
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+```
+
+`EMAIL_USER`, `CLIENT_ID`, `CLIENT_SECRET`, and `REFRESH_TOKEN` are also needed if users should receive registration or transaction emails. Ensure MongoDB Atlas allows connections from your Vercel deployment, then redeploy. You can verify API routing at `/api/health`; it should return `{"status":"ok"}`.
+
 ---
 
 ## 🏛 System Architecture

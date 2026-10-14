@@ -15,10 +15,27 @@ async function request(endpoint, options = {}) {
   }
 
   const response = await fetch(`${BASE_URL}${endpoint}`, config);
-  const data = await response.json();
+  const contentType = response.headers.get("content-type") || "";
+  const responseBody = await response.text();
+  let data;
+
+  if (responseBody && contentType.includes("json")) {
+    try {
+      data = JSON.parse(responseBody);
+    } catch {
+      throw new Error("The API returned invalid JSON. Please try again later.");
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || "Something went wrong");
+    throw new Error(
+      data?.message ||
+        `The API request failed (${response.status}). Check Vercel routing and environment variables.`
+    );
+  }
+
+  if (!contentType.includes("json")) {
+    throw new Error("The API returned a non-JSON response. Check Vercel API routing.");
   }
 
   return data;
