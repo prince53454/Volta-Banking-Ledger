@@ -116,7 +116,7 @@ export default function LoginPage() {
         </form>
 
         <p className="auth-footer">
-          Don&apos;t have a Volta account? <Link to="/register">Create one in 30 seconds</Link>
+          New to Volta? <Link to="/register">Open an account</Link>
         </p>
       </div>
     </div>
