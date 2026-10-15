@@ -1,3 +1,18 @@
+<!--STYLE-START-->
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/prince53454/prince53454/main/assets/banner.svg" width="100%"/>
+
+# ⟦ Volta-Banking-Ledger ⟧
+
+![status](https://img.shields.io/badge/STATUS-ONLINE-00ff9c?style=for-the-badge&labelColor=020806)
+![stars](https://img.shields.io/github/stars/prince53454/Volta-Banking-Ledger?style=for-the-badge&labelColor=020806&color=ff2d2d)
+
+<img src="https://raw.githubusercontent.com/prince53454/prince53454/main/assets/divider.svg" width="100%"/>
+
+</div>
+<!--STYLE-END-->
+
 # VOLTA — Next-Gen Digital Banking & Financial Ledger
 
 A secure, institutional-grade double-entry banking platform and financial ledger application built with Node.js/Express, MongoDB multi-document transactions, JWT zero-trust authentication, Nodemailer notifications, and a modern React dashboard.
